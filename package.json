@@ -1,0 +1,171 @@
+{
+  "name": "sql-whisperer",
+  "displayName": "SQL Whisperer",
+  "description": "Professional-grade VS Code extension for SQL development. Explore schemas, run queries, visualize results, and chat with an AI agent that understands your database.",
+  "license": "AGPL-3.0-or-later",
+  "publisher": "your-publisher-id",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/sql-whisperer.git"
+  },
+  "icon": "resources/icon.png",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Programming Languages", "Data Science"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "sqlwhisperer.runQuery", "title": "Run SQL Query", "icon": "$(play)" },
+      { "command": "sqlwhisperer.setConnectionString", "title": "SQL Whisperer: Set Connection String" },
+      { "command": "sqlwhisperer.setPassword", "title": "SQL Whisperer: Set Connection Password" },
+      { "command": "sqlwhisperer.setApiKey", "title": "SQL Whisperer: Set Anthropic API Key" },
+      { "command": "sqlwhisperer.connect", "title": "SQL Whisperer: Connect to Database", "icon": "$(plug)" },
+      { "command": "sqlwhisperer.disconnect", "title": "SQL Whisperer: Disconnect", "icon": "$(debug-disconnect)" },
+      { "command": "sqlwhisperer.refreshSchema", "title": "Refresh Schema", "icon": "$(refresh)" },
+      { "command": "sqlwhisperer.searchSchema", "title": "Search Schema", "icon": "$(search)" },
+      { "command": "sqlwhisperer.showSchemaGraph", "title": "Show Schema Graph", "category": "SQL Whisperer", "icon": "$(type-hierarchy)" }
+    ],
+    "chatParticipants": [
+      {
+        "id": "sqlwhisperer",
+        "name": "sql",
+        "description": "Ask questions about your database schema and get help writing SQL queries.",
+        "isSticky": true
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "sqlwhisperer.runQuery",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorLangId == sql"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sqlwhisperer-sidebar",
+          "title": "SQL Whisperer",
+          "icon": "resources/activity-bar-icon.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "sqlwhisperer",
+          "title": "SQL Results",
+          "icon": "resources/activity-bar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "sqlwhisperer-sidebar": [
+        {
+          "id": "sqlwhisperer.schema",
+          "name": "Schema Explorer",
+          "icon": "resources/activity-bar-icon.svg"
+        }
+      ],
+      "sqlwhisperer": [
+        {
+          "id": "sqlwhisperer.results",
+          "name": "Query Results",
+          "type": "webview",
+          "icon": "resources/activity-bar-icon.svg"
+        },
+        {
+          "id": "sqlwhisperer.schemaGraph",
+          "name": "Database Schema",
+          "type": "webview",
+          "icon": "resources/activity-bar-icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        { "command": "sqlwhisperer.refreshSchema", "when": "view == sqlwhisperer.schema", "group": "navigation" },
+        { "command": "sqlwhisperer.searchSchema", "when": "view == sqlwhisperer.schema", "group": "navigation" },
+        { "command": "sqlwhisperer.connect", "when": "view == sqlwhisperer.schema", "group": "navigation" }
+      ]
+    },
+    "configuration": {
+      "title": "SQL Whisperer",
+      "properties": {
+        "sqlwhisperer.connectionString": {
+          "type": "string",
+          "default": "",
+          "description": "Connection string URI (e.g. postgresql://user:pass@host:5432/dbname). If set, overrides individual host/port/database fields. Use the command for secure storage."
+        },
+        "sqlwhisperer.dbType": {
+          "type": "string",
+          "enum": ["postgresql", "mysql", "sqlite", "mssql"],
+          "default": "postgresql",
+          "description": "Database type (only needed when not using a connection string)."
+        },
+        "sqlwhisperer.host": { "type": "string", "default": "localhost", "description": "Database server host." },
+        "sqlwhisperer.port": { "type": "number", "default": 5432, "description": "Database server port." },
+        "sqlwhisperer.database": { "type": "string", "default": "", "description": "Database name (or SQLite file path)." },
+        "sqlwhisperer.username": { "type": "string", "default": "", "description": "Database username." },
+        "sqlwhisperer.password": { "type": "string", "default": "", "description": "Password (plain text). Use command for secure storage." },
+        "sqlwhisperer.ssl": { "type": "boolean", "default": false, "description": "Enable SSL/TLS." },
+        "sqlwhisperer.mcp.enabled": { "type": "boolean", "default": true, "description": "Auto-start the built-in MCP server." },
+        "sqlwhisperer.mcp.port": { "type": "number", "default": 3331, "description": "MCP server port." },
+        "sqlwhisperer.anthropic.apiKey": { "type": "string", "default": "", "description": "Anthropic API key (use command for secure storage)." },
+        "sqlwhisperer.anthropic.model": { "type": "string", "default": "claude-sonnet-4-20250514", "description": "Claude model to use." },
+        "sqlwhisperer.agent.introspectionSkill": {
+          "type": "string",
+          "editPresentation": "multilineText",
+          "description": "Instructions for the AI agent on how to introspect the database schema.",
+          "default": "## SQL Introspection Skill\n\nBefore writing any query, always introspect the schema:\n1. Use get_schema to list tables and columns\n2. Check foreign key relationships\n3. Verify column names and data types\n4. Always use LIMIT for exploratory queries\n5. Prefer explicit column lists over SELECT *"
+        },
+        "sqlwhisperer.agent.rules": {
+          "type": "string",
+          "editPresentation": "multilineText",
+          "description": "General rules and guidelines for the SQL Whisperer agent.",
+          "default": "## SQL Whisperer Rules\n\n- Use ANSI SQL where possible\n- Always explicit column names\n- Warn before INSERT/UPDATE/DELETE\n- Always include WHERE on UPDATE/DELETE\n- Use CTEs over nested subqueries for readability\n- Suggest EXPLAIN for slow queries"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build:webview && npm run bundle",
+    "build:webview": "vite build",
+    "compile": "tsc -p ./",
+    "bundle": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --external:pg --external:mysql2 --external:better-sqlite3 --external:mssql --format=cjs --platform=node --minify --log-level=info",
+    "watch": "tsc -watch -p ./",
+    "watch:bundle": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --external:pg --external:mysql2 --external:better-sqlite3 --external:mssql --format=cjs --platform=node --watch",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/mssql": "^9.1.5",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.14.0",
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "better-sqlite3": "^11.9.1",
+    "cytoscape": "^3.33.1",
+    "cytoscape-cose-bilkent": "^4.1.0",
+    "mssql": "^11.0.1",
+    "mysql2": "^3.14.1",
+    "pg": "^8.14.1",
+    "zod": "^3.24.1"
+  }
+}
